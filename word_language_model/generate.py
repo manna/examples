@@ -31,6 +31,8 @@ parser.add_argument('--temperature', type=float, default=1.0,
                     help='temperature - higher will increase diversity')
 parser.add_argument('--log-interval', type=int, default=100,
                     help='reporting interval')
+parser.add_argument('--primer', type=str, default='',
+                    help='Beginning of generated text. Example: "Yesterday , she"')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -51,9 +53,19 @@ model.eval()
 corpus = data.Corpus(args.data)
 ntokens = len(corpus.dictionary)
 hidden = model.init_hidden(1)
-input = torch.randint(ntokens, (1, 1), dtype=torch.long).to(device)
+input = torch.randint(ntokens, (1, 1), dtype=torch.long).to(device) # Represents the first word, which is randomly selected.
 
-with open(args.outf, 'w') as outf:
+if args.primer:
+    with open(args.outf, 'w') as outf:
+        outf.write(args.primer + ' ')
+    
+    primer_words = args.primer.split()
+    for word in primer_words:
+        word_idx = corpus.dictionary.word2idx[word]
+        input.fill_(word_idx)
+        _output, hidden = model(input, hidden)
+        
+with open(args.outf, 'ab') as outf:
     with torch.no_grad():  # no tracking history
         for i in range(args.words):
             output, hidden = model(input, hidden)
@@ -61,8 +73,10 @@ with open(args.outf, 'w') as outf:
             word_idx = torch.multinomial(word_weights, 1)[0]
             input.fill_(word_idx)
             word = corpus.dictionary.idx2word[word_idx]
-
-            outf.write(word + ('\n' if i % 20 == 19 else ' '))
+            
+            outstr = word + ('\n' if i % 20 == 19 else ' ')
+            
+            outf.write(outstr.encode('utf-8'))
 
             if i % args.log_interval == 0:
                 print('| Generated {}/{} words'.format(i, args.words))
