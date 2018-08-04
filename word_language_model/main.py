@@ -29,6 +29,8 @@ parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
 parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
+parser.add_argument('--eval_batch_size', type=int, default=10,
+                    help='eval batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
 parser.add_argument('--dropout', type=float, default=0.2,
@@ -82,10 +84,9 @@ def batchify(data, bsz):
     data = data.view(bsz, -1).t().contiguous()
     return data.to(device)
 
-eval_batch_size = 10
 train_data = batchify(corpus.train, args.batch_size)
-val_data = batchify(corpus.valid, eval_batch_size)
-test_data = batchify(corpus.test, eval_batch_size)
+val_data = batchify(corpus.valid, args.eval_batch_size)
+test_data = batchify(corpus.test, args.eval_batch_size)
 
 ###############################################################################
 # Build the model
@@ -130,7 +131,7 @@ def evaluate(data_source):
     model.eval()
     total_loss = 0.
     ntokens = len(corpus.dictionary)
-    hidden = model.init_hidden(eval_batch_size)
+    hidden = model.init_hidden(args.eval_batch_size)
     with torch.no_grad():
         for i in range(0, data_source.size(0) - 1, args.bptt):
             data, targets = get_batch(data_source, i)
