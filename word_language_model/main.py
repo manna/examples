@@ -9,6 +9,7 @@ import torch.onnx
 
 import data
 import model
+from lensing import LensedCrossEntropyLoss, expand_lens, expand_lens_zeros
 
 parser = argparse.ArgumentParser(description='PyTorch Wikitext-2 RNN/LSTM Language Model')
 parser.add_argument('--data', type=str, default='./data/wikitext-2',
@@ -88,6 +89,19 @@ train_data = batchify(corpus.train, args.batch_size)
 val_data = batchify(corpus.valid, args.eval_batch_size)
 test_data = batchify(corpus.test, args.eval_batch_size)
 
+
+###############################################################################
+# Load the lens
+###############################################################################
+
+confusion_lens = torch.load('./gender_7_pronouns.pt')
+lensed_words = ['he', 'she', 'him', 'her', 'his', 'himself', 'herself']
+confusion_lens = expand_lens_zeros(confusion_lens, lensed_words, corpus.dictionary.idx2word) # Resizes by padding with NaNs.
+for i in range(confusion_lens.data.shape[0]):
+    if confusion_lens[i,i] == 0:
+        confusion_lens[i,i] = 1. # Diagonal: Replace 0s with 1
+confusion_lens = confusion_lens.to(device)
+        
 ###############################################################################
 # Build the model
 ###############################################################################
@@ -95,7 +109,10 @@ test_data = batchify(corpus.test, args.eval_batch_size)
 ntokens = len(corpus.dictionary)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
 
-criterion = nn.CrossEntropyLoss()
+if confusion_lens is None:
+    criterion = nn.CrossEntropyLoss()
+else:
+    criterion = LensedCrossEntropyLoss(confusion_lens)
 
 ###############################################################################
 # Training code
