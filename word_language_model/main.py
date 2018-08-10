@@ -98,8 +98,8 @@ test_data = batchify(corpus.test, args.eval_batch_size)
 
 confusion_lens = None
 if args.use_lens:
-    confusion_lens = torch.load('./gender_7_pronouns.pt')
-    lensed_words = ['he', 'she', 'him', 'her', 'his', 'himself', 'herself']
+    confusion_lens = torch.load('./7GP_confusion.pt')
+    lensed_words = ['he', 'she', 'him', 'her', 'his', 'himself', 'herself', 'He', 'She', 'Him', 'Her', 'His', 'Himself', 'Herself']
 
     """ TODO: Maybe just use expand_lens(confusion_lens, lensed_words, corpus.dictionary.idx2word, fill_value=0) 
     Then we can do the .to(device) immediately on torch.load, and delete the expand_lens_zeros implementation.
