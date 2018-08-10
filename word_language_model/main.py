@@ -48,6 +48,8 @@ parser.add_argument('--save', type=str, default='model.pt',
                     help='path to save the final model')
 parser.add_argument('--onnx-export', type=str, default='',
                     help='path to export the final model in onnx format')
+parser.add_argument('--use-lens', type=bool, default=False,
+                    help='Whether to use gender pronouns lens or not')
 args = parser.parse_args()
 
 # Set the random seed manually for reproducibility.
@@ -94,13 +96,19 @@ test_data = batchify(corpus.test, args.eval_batch_size)
 # Load the lens
 ###############################################################################
 
-confusion_lens = torch.load('./gender_7_pronouns.pt')
-lensed_words = ['he', 'she', 'him', 'her', 'his', 'himself', 'herself']
-confusion_lens = expand_lens_zeros(confusion_lens, lensed_words, corpus.dictionary.idx2word) # Resizes by padding with NaNs.
-for i in range(confusion_lens.data.shape[0]):
-    if confusion_lens[i,i] == 0:
-        confusion_lens[i,i] = 1. # Diagonal: Replace 0s with 1
-confusion_lens = confusion_lens.to(device)
+confusion_lens = None
+if args.use_lens:
+    confusion_lens = torch.load('./gender_7_pronouns.pt')
+    lensed_words = ['he', 'she', 'him', 'her', 'his', 'himself', 'herself']
+
+    """ TODO: Maybe just use expand_lens(confusion_lens, lensed_words, corpus.dictionary.idx2word, fill_value=0) 
+    Then we can do the .to(device) immediately on torch.load, and delete the expand_lens_zeros implementation.
+    """
+    confusion_lens = expand_lens_zeros(confusion_lens, lensed_words, corpus.dictionary.idx2word) # Resizes by padding with NaNs.
+    for i in range(confusion_lens.data.shape[0]):
+        if confusion_lens[i,i] == 0:
+            confusion_lens[i,i] = 1. # Diagonal: Replace 0s with 1
+    confusion_lens = confusion_lens.to(device)
         
 ###############################################################################
 # Build the model

@@ -78,5 +78,5 @@ with open(args.outf, 'ab') as outf:
             
             outf.write(outstr.encode('utf-8'))
 
-            if i % args.log_interval == 0:
+            if i and i % args.log_interval == 0:
                 print('| Generated {}/{} words'.format(i, args.words))
